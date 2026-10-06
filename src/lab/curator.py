@@ -161,7 +161,17 @@ def curate_skills(results_dir="results", source_condition="baseline", out_dir=No
         model = make_model()
 
     response = model.invoke(prompt)
-    reply_content = response.content if hasattr(response, "content") else str(response)
+    if hasattr(response, "content"):
+        raw_content = response.content
+        if isinstance(raw_content, list):
+            reply_content = "".join(
+                part.get("text", "") if isinstance(part, dict) else str(part)
+                for part in raw_content
+            )
+        else:
+            reply_content = str(raw_content)
+    else:
+        reply_content = str(response)
 
     written_paths = []
     blocks = parse_skill_blocks(reply_content)

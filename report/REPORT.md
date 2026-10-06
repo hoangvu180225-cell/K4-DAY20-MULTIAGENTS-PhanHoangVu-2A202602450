@@ -14,11 +14,9 @@
 
 ## 2. Giả thuyết (commit TRƯỚC tag `freeze`, Phần 4.0)
 
-> Dự đoán điều kiện nào đạt điểm cao nhất trên **tác vụ đánh giá** và vì sao. Nêu căn cứ từ phân loại lỗi (mục 4) và từ tài liệu tham khảo. Điền cả ba dòng; `verify_freeze.py` kiểm tra điều này.
-
-- H1 (subagents so với baseline):
-- H2 (skills-auto so với baseline):
-- H3 (tác vụ học so với tác vụ đánh giá):
+- H1 (subagents so với baseline): Dự đoán điều kiện subagents sẽ đạt điểm kỹ thuật tương đương hoặc nhỉnh hơn trên tác vụ đánh giá, nhưng tiêu tốn lượng token gấp 2 đến 3 lần baseline. Căn cứ từ tập học cho thấy phân rã đa tác tử giúp kiểm tra logic tốt hơn (13/18 vs 4/18) nhưng tốn 436k tokens/run so với 169k tokens/run của baseline và có nguy cơ chạm recursion limit.
+- H2 (skills-auto so với baseline): Dự đoán skills-auto sẽ cải thiện các check quy ước tổ chức quen thuộc (như CHANGELOG, regression test, format UTC, cents), nhưng không vượt trội hoàn toàn trên quy ước mới của eval và có nguy cơ quá khớp (overfitting). Căn cứ: nghiên cứu SkillEvolBench và SkillsBench chỉ ra rằng tri thức sinh tự động từ learning set khó chuyển giao hoàn hảo sang phân phối dữ liệu mới.
+- H3 (tác vụ học so với tác vụ đánh giá): Dự đoán điểm trung bình trên tác vụ đánh giá sẽ thấp hơn trên tác vụ học ở cả 3 điều kiện. Căn cứ: tác vụ đánh giá có dữ liệu mới và review bot ẩn toàn bộ feedback detail cùng việc bổ sung một quy ước mới mà tác tử chưa từng thấy trong tập học.
 
 ## 3. Làm quen Deep Agents (Phần 0.3)
 
@@ -63,11 +61,13 @@ Nhận xét:
 
 ## 6. Self-evolving: skill do curator sinh (Phần 3)
 
-- Số lần chạy curator, số skill bị xóa và lý do:
+- Số lần chạy curator: 1 lần. Số skill bị xóa: 0 (cả 2 skill sinh ra đều đạt chuẩn `validate_skill`).
 
 | Skill | Tổng quát hay riêng cho tác vụ học? | Đúng hay sai (nêu chỗ sai nếu có) | Độ dài, `description` và `skills_read` ở Phần 3.4 |
 |---|---|---|---|
-| | | | |
+| `python-rounding-and-rules` | Tổng quát cho các module Python cần xử lý tài chính và quy chuẩn test/changelog | Đúng hoàn toàn, chỉ dẫn chính xác về `ROUND_HALF_UP`, type annotations, `CHANGELOG.md` và `tests/test_regressions.py` | 9 dòng, mô tả tình huống rõ ràng; `skills_read = 0` (do agent ưu tiên tool trực tiếp) |
+| `robust-file-output-generation` | Tổng quát cho các tác vụ làm sạch và xuất báo cáo dữ liệu | Đúng, chỉ dẫn kiểm tra ghi file ra đĩa trước khi kết thúc, chuẩn hóa định dạng UTC và chuyển đổi đơn vị integer cents | 8 dòng, mô tả tình huống chuẩn; `skills_read = 0` |
+
 
 ## 7. Kết quả so sánh (Phần 4.3, 4.4)
 
