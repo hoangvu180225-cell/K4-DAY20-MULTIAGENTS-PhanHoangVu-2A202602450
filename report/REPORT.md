@@ -4,13 +4,13 @@
 
 ## 1. Thông tin sinh viên và cấu hình
 
-- Họ tên:
-- Mã sinh viên:
+- Họ tên: Phan Hoàng Vũ
+- Mã sinh viên: 2A202602450
 
-- Nhà cung cấp và mô hình (`LAB_MODEL`, không ghi khóa API), nhiệt độ (`LAB_TEMPERATURE`), `recursion_limit`:
-- Phiên bản Deep Agents (`pip show deepagents`), hệ điều hành, chạy trực tiếp hay trong Docker:
-- Số lần chạy tác vụ đã dùng / ngân sách:
-- Commit của tag `freeze`:
+- Nhà cung cấp và mô hình: `google_genai:gemini-3.5-flash-lite`, nhiệt độ (`LAB_TEMPERATURE=0`), `recursion_limit=60`
+- Phiên bản Deep Agents: 0.7.21, hệ điều hành: Windows 11 (chạy Python 3.14 / môi trường ảo `.venv`)
+- Số lần chạy tác vụ đã dùng / ngân sách: 6 / 30 runs
+- Commit của tag `freeze`: (chờ cập nhật ở Phần 4)
 
 ## 2. Giả thuyết (commit TRƯỚC tag `freeze`, Phần 4.0)
 
@@ -30,20 +30,36 @@
 
 ## 4. Đường cơ sở và phân loại lỗi (Phần 2.2)
 
-> Chỉ dùng tác vụ học. Mỗi dòng là một check thất bại.
-
 | Tác vụ | Check thất bại | Nhóm lỗi (A-G) | Bằng chứng (trích ngắn từ `detail` hoặc vết) |
 |---|---|---|---|
-| | | | |
+| `code-learn` | `tests_not_modified` | A (Bỏ qua đặc tả) | `the original files in tests/ must not be modified (new test files are allowed)` |
+| `code-learn` | `discount_rounds_half_up` | B (Không kiểm chứng) | `wrong for: [('10.05', 10, '9.05'), ('19.99', 15, '16.99'), ('0.05', 50, '0.03'), ('2.665', 0, '2.67')]` |
+| `code-learn` | `rule_type_hints` | E (Vi phạm quy ước tổ chức) | `RULE: every public function (name not starting with '_') in the package has type annotations on all parameters and on the return value.` |
+| `code-learn` | `rule_regression_tests` | E (Vi phạm quy ước tổ chức) | `RULE: add tests/test_regressions.py with one test function per bug you fixed (at least 3); the file must pass.` |
+| `code-learn` | `rule_changelog` | E (Vi phạm quy ước tổ chức) | `RULE: record each fix in CHANGELOG.md under the heading '## Unreleased' as a bullet '- fix(<function name>): <short description>' (at least 3 bullets).` |
+| `data-learn` | `rule_clean_csv` | E (Vi phạm quy ước tổ chức) | `RULE: write workspace/clean.csv with the header order_id,timestamp_utc,region,amount_cents; one row per distinct order with a known amount; timestamp_utc as YYYY-MM-DDTHH:MM:SSZ (UTC); region in canonical spelling (North, South, East, West); amount in integer cents.` |
+| `data-learn` | `rule_money_in_cents` | E (Vi phạm quy ước tổ chức) | `detail: FileNotFoundError: ... answer.json` (do rule yêu cầu đơn vị cents chưa được ghi nhận trong đề) |
+| `logs-learn` | `rule_meta_block` | E (Vi phạm quy ước tổ chức) | Check có tên bắt đầu bằng `rule_`: yêu cầu khối `meta` trong JSON nhưng đề không yêu cầu |
 
-Nhận xét: nhóm lỗi nào chiếm đa số? Skill có thể phòng ngừa nhóm đó không?
+Nhận xét: 
+- Nhóm lỗi chiếm đa số: **Nhóm E (Vi phạm quy ước tổ chức)** chiếm tuyệt đại đa số lỗi. Thống kê từ `scripts/check_breakdown.py` xác nhận: ở điều kiện baseline, tác tử đạt **4/18** check kỹ thuật nhưng đạt **0/9** check quy ước nhà (`rule_*`). Ở điều kiện subagents, số check kỹ thuật tăng lên **13/18** nhưng check quy ước vẫn giữ nguyên **0/9**.
+- Bằng chứng phủ định cho các nhóm A-D: Các hàm logic cốt lõi như `parse_price_all_formats`, `low_stock_follows_docstring`, `csv_quoting_follows_docstring` đều đạt. Tác tử có năng lực lập trình và phân tích tốt, nhưng không thể đoán trước các quy ước ngầm của tổ chức Acme nếu không được cung cấp hướng dẫn.
+- Khả năng phòng ngừa của Skill: Một procedural skill do curator sinh ra từ feedback `RULE:` hoàn toàn có thể phòng ngừa triệt để nhóm lỗi E thông qua checklist các file bắt buộc (`clean.csv`, `CHANGELOG.md`, `tests/test_regressions.py`) và quy cách định dạng.
 
 ## 5. Điều kiện `subagents` (Phần 2.3)
 
 - Các subagent đã định nghĩa (tên, vai trò, lý do thiết kế):
+  + `explorer`: Chuyên khảo sát cấu trúc workspace, đọc tài liệu docstring, README, xem mẫu dữ liệu mà không chỉnh sửa file, giúp tác tử chính hiểu bối cảnh trước khi sửa.
+  + `implementer`: Chuyên thực thi sửa đổi mã nguồn, làm sạch dữ liệu, xử lý logs và chạy test xác nhận kết quả.
+  + `reviewer`: Chuyên rà soát độc lập các file đầu ra, đối chiếu định dạng và kiểm tra các quy chuẩn trước khi kết thúc tác vụ.
 - `subagent_calls` ở từng tác vụ và nhận xét (kể cả trường hợp bằng 0):
-- Thông tin thiếu hoặc thừa khi giao việc (nếu có giao việc):
+  + Cả 3 tác vụ học đều ghi nhận `subagent_calls = 0`.
+  + Nhận xét: Tác tử chính Deep Agents tự quyết định luồng hành động dựa trên `SUBAGENTS_NOTE`. Với các tác vụ trong một sandbox thư mục cục bộ, tác tử chính thấy đủ khả năng trực tiếp dùng các công cụ tệp (`read_file`, `write_file`) và shell (`execute`) nên chọn không phân nhánh giao việc cho subagent nhằm tiết kiệm bước chuyển ngữ cảnh.
+- Thông tin thiếu hoặc thừa khi giao việc (nếu có giao việc): Không phát sinh lời giao việc do `subagent_calls = 0`.
 - Ảnh hưởng đến token và thời gian:
+  + Token trung bình: `baseline` tiêu tốn trung bình 169,233 tokens/tác vụ; `subagents` tiêu tốn trung bình 436,799 tokens/tác vụ (tăng gấp ~2.58 lần do ngữ cảnh prompt lớn hơn khi định nghĩa các subagent).
+  + Tuy nhiên, về mặt hiệu quả kỹ thuật, `subagents` đã giúp nâng số check kỹ thuật đạt từ 4/18 lên 13/18 (theo `scripts/check_breakdown.py`).
+
 
 ## 6. Self-evolving: skill do curator sinh (Phần 3)
 
